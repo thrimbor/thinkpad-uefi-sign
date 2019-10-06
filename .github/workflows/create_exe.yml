@@ -1,0 +1,19 @@
+name: Create executable for Windows
+on: [push]
+
+jobs:
+  build:
+    name: Build exe
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@master
+      - name: Run PyInstaller
+        run: |
+          pip install PyInstaller
+          pip install pycryptodome
+          pyinstaller --onefile --windowed --name verify verify.py
+          pyinstaller --onefile --windowed --name sign sign.py
+      - uses: actions/upload-artifact@master
+        with:
+          name: Windows binaries
+          path: dist
