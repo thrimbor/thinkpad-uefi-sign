@@ -22,7 +22,7 @@ def get_pubkey(data):
     print("INFO: Found public key modulus at offset ", format(modulus_offset, '#04x'))
 
     modulus_int = int.from_bytes(data[modulus_offset:modulus_offset+pubkey_modulus_length], byteorder='big')
-    print("Length: " + str(len(data[modulus_offset:modulus_offset+pubkey_modulus_length])))
+    assert(len(data[modulus_offset:modulus_offset+pubkey_modulus_length]) == 129)
     return RSA.construct((modulus_int, 3), consistency_check=True)
 
 

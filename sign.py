@@ -53,6 +53,7 @@ def main():
     tcpa_volume_blocks = find_tcpa_volume_blocks(data)
 
     # Generate a new RSA key-pair
+    print("INFO: Generating new 1024 bit key with 3 as public exponent...")
     key = RSA.generate(1024, e=3)
 
     for tcpa_volume_block in tcpa_volume_blocks:
@@ -69,6 +70,7 @@ def main():
 
         # Insert calculated hash into TCPA volume block
         tcpa_volume_block[1] = tcpa_volume_block[1][:32] + volume_hash.digest() + tcpa_volume_block[1][32+20:]
+        print("INFO: Volume hash updated")
 
         # Extract the block of data that is to be hashed for the signature
         block_to_hash = tcpa_volume_block[1][:tcpa_volume_block_length-131]
@@ -80,6 +82,7 @@ def main():
         sig = key._decrypt(int.from_bytes(padded_tcpa_hash, byteorder='big'))
         # Convert the raw signature number to a block of bytes
         signature_block = number.long_to_bytes(sig, number.ceil_div(number.size(key.n), 8))
+        print("INFO: Signature calculated")
 
         assert(len(signature_block) == 128)
 
@@ -88,15 +91,18 @@ def main():
 
         # Insert modified block into data
         data = data[:tcpa_volume_block[0]] + tcpa_volume_block[1] + data[tcpa_volume_block[0]+tcpa_volume_block_length:]
+        print("INFO: TCPA volume block signed")
 
     # Signatures updated, now insert public key
     modulus_block = key.n.to_bytes(length=pubkey_modulus_length, byteorder='big')
     data = data[:pubkey_location] + modulus_block + data[pubkey_location+pubkey_modulus_length:]
+    print("INFO: Public key stored")
 
     # Write updated data output file
     output_file = open(args.outfile, "wb")
     output_file.write(data)
     output_file.close()
+    print("\nIMAGE SIGNED!")
 
 
 if __name__ == '__main__':
