@@ -52,6 +52,21 @@ def find_tcpa_volume_blocks(data):
         remaining_data = remaining_data[tcpa_occurrence.start() + tcpa_volume_block_length:]
 
 
+ffsv2_volume_pattern = regex.compile(b"\x00{16}\xd9\x54\x93\x7a\x68\x04\x4a\x44\x81\xce\x0b\xf6\x17\xd8\x90\xdf[\x00-\xFF]{8}\x5f\x46\x56\x48")
+
+def find_first_ffsv2_volume_offset(data):
+    # This will simply look for the first FFSv2 volume. There may be several volumes, so we rely on the first one
+    # being the correct one, which seems to apply to all ThinkPad images I've seen so far.
+    volume_occurrence = regex.search(ffsv2_volume_pattern, data)
+    if not volume_occurrence:
+        print("ERROR: Could not find FFSv2 volume GUID")
+        quit(1)
+
+    print("INFO: FFSv2 volume offset: ", format(volume_occurrence.start(), '#04x'))
+
+    return volume_occurrence.start()
+
+
 def main():
     parser = argparse.ArgumentParser(description='Lenovo UEFI signature verifier, (C) 2019 Stefan Schmidt')
     parser.add_argument('file', metavar='INPUT_FILE', nargs=1, help='input file')
@@ -62,6 +77,9 @@ def main():
 
     # Extract the public RSA key from the firmware file
     rsa_pubkey = get_pubkey(data)
+
+    # Extract the FFSv2 volume offset
+    ffsv2_offset = find_first_ffsv2_volume_offset(data)
 
     # Get all TCPA blocks to check signature on each
     tcpa_volume_blocks = find_tcpa_volume_blocks(data)
@@ -77,6 +95,9 @@ def main():
 
         print("INFO: Volume offset: " + str(tcpa_volume_offset))
         print("INFO: Volume size: " + str(tcpa_volume_size))
+
+        # Shift the offsets so that they're relative to the FFSv2 volume
+        tcpa_volume_offset += ffsv2_offset
 
         # Calculate actual volume hash
         volume_data = data[tcpa_volume_offset:tcpa_volume_offset+tcpa_volume_size]
